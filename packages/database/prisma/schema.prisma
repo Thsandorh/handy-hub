@@ -1,0 +1,287 @@
+// MesterPont Database Schema
+// PostgreSQL + Prisma ORM
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ===================================
+// ENUMS
+// ===================================
+
+enum UserRole {
+  CLIENT
+  TASKER
+  ADMIN
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum TaskStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum BudgetType {
+  FIXED
+  HOURLY
+}
+
+enum OfferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+enum PaymentStatus {
+  PENDING
+  HELD
+  RELEASED
+  REFUNDED
+  FAILED
+}
+
+// ===================================
+// MODELS
+// ===================================
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String?  @map("password_hash")
+  firstName    String   @map("first_name") @db.VarChar(100)
+  lastName     String   @map("last_name") @db.VarChar(100)
+  role         UserRole @default(CLIENT)
+  avatarUrl    String?  @map("avatar_url")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  taskerProfile  TaskerProfile?
+  clientTasks    Task[]         @relation("ClientTasks")
+  assignedTasks  Task[]         @relation("TaskerTasks")
+  offers         Offer[]
+  payments       Payment[]      @relation("ClientPayments")
+  receivedPayments Payment[]    @relation("TaskerPayments")
+  sentReviews    Review[]       @relation("ReviewsSent")
+  receivedReviews Review[]      @relation("ReviewsReceived")
+  messages       Message[]
+
+  @@map("users")
+}
+
+model TaskerProfile {
+  userId              String             @id @map("user_id") @db.Uuid
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  bio                 String?
+  verificationStatus  VerificationStatus @default(PENDING) @map("verification_status")
+  idDocumentUrl       String?            @map("id_document_url")
+  selfieVerificationUrl String?          @map("selfie_verification_url")
+  taxNumber           String?            @map("tax_number") @db.VarChar(50)
+  hourlyRate          Decimal?           @map("hourly_rate") @db.Decimal(10, 2)
+  availability        Json?              // {"monday": ["09:00-17:00"], ...}
+
+  locationLat         Decimal?           @map("location_lat") @db.Decimal(10, 7)
+  locationLng         Decimal?           @map("location_lng") @db.Decimal(10, 7)
+  serviceRadiusKm     Int                @default(10) @map("service_radius_km")
+
+  totalEarnings       Decimal            @default(0) @map("total_earnings") @db.Decimal(12, 2)
+  completedTasks      Int                @default(0) @map("completed_tasks")
+  averageRating       Decimal            @default(0) @map("average_rating") @db.Decimal(3, 2)
+
+  createdAt           DateTime           @default(now()) @map("created_at")
+
+  // Relations
+  skills              TaskerSkill[]
+
+  @@map("tasker_profiles")
+}
+
+model Skill {
+  id       String  @id @default(uuid()) @db.Uuid
+  name     String  @unique @db.VarChar(100)
+  category String? @db.VarChar(50)
+  iconName String? @map("icon_name") @db.VarChar(50)
+
+  // Relations
+  taskers  TaskerSkill[]
+  tasks    Task[]
+
+  @@map("skills")
+}
+
+model TaskerSkill {
+  taskerId        String @map("tasker_id") @db.Uuid
+  skillId         String @map("skill_id") @db.Uuid
+  experienceYears Int?   @map("experience_years")
+
+  tasker          TaskerProfile @relation(fields: [taskerId], references: [userId], onDelete: Cascade)
+  skill           Skill         @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([taskerId, skillId])
+  @@map("tasker_skills")
+}
+
+model Task {
+  id              String      @id @default(uuid()) @db.Uuid
+  clientId        String      @map("client_id") @db.Uuid
+  taskerId        String?     @map("tasker_id") @db.Uuid
+  skillId         String?     @map("skill_id") @db.Uuid
+
+  title           String      @db.VarChar(255)
+  description     String
+  locationAddress String      @map("location_address")
+  locationLat     Decimal     @map("location_lat") @db.Decimal(10, 7)
+  locationLng     Decimal     @map("location_lng") @db.Decimal(10, 7)
+
+  scheduledAt     DateTime?   @map("scheduled_at")
+  dueDate         DateTime?   @map("due_date")
+
+  budgetType      BudgetType  @map("budget_type")
+  budgetAmount    Decimal     @map("budget_amount") @db.Decimal(10, 2)
+  finalAmount     Decimal?    @map("final_amount") @db.Decimal(10, 2)
+
+  status          TaskStatus  @default(OPEN)
+
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  completedAt     DateTime?   @map("completed_at")
+
+  // Relations
+  client          User        @relation("ClientTasks", fields: [clientId], references: [id], onDelete: Cascade)
+  tasker          User?       @relation("TaskerTasks", fields: [taskerId], references: [id])
+  skill           Skill?      @relation(fields: [skillId], references: [id])
+  photos          TaskPhoto[]
+  offers          Offer[]
+  payments        Payment[]
+  reviews         Review[]
+  conversations   Conversation[]
+
+  @@index([status])
+  @@index([clientId])
+  @@index([taskerId])
+  @@index([locationLat, locationLng])
+  @@map("tasks")
+}
+
+model TaskPhoto {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  photoUrl   String   @map("photo_url")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
+
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_photos")
+}
+
+model Offer {
+  id             String      @id @default(uuid()) @db.Uuid
+  taskId         String      @map("task_id") @db.Uuid
+  taskerId       String      @map("tasker_id") @db.Uuid
+
+  proposedAmount Decimal     @map("proposed_amount") @db.Decimal(10, 2)
+  message        String?
+  status         OfferStatus @default(PENDING)
+
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  task           Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  tasker         User        @relation(fields: [taskerId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, taskerId])
+  @@map("offers")
+}
+
+model Payment {
+  id                    String        @id @default(uuid()) @db.Uuid
+  taskId                String?       @map("task_id") @db.Uuid
+  clientId              String        @map("client_id") @db.Uuid
+  taskerId              String?       @map("tasker_id") @db.Uuid
+
+  amount                Decimal       @db.Decimal(10, 2)
+  platformFee           Decimal?      @map("platform_fee") @db.Decimal(10, 2)
+  taskerPayout          Decimal?      @map("tasker_payout") @db.Decimal(10, 2)
+
+  paymentProvider       String        @map("payment_provider") @db.VarChar(50)
+  providerTransactionId String?       @map("provider_transaction_id") @db.VarChar(255)
+
+  status                PaymentStatus @default(PENDING)
+
+  heldAt                DateTime?     @map("held_at")
+  releasedAt            DateTime?     @map("released_at")
+
+  createdAt             DateTime      @default(now()) @map("created_at")
+
+  task                  Task?         @relation(fields: [taskId], references: [id])
+  client                User          @relation("ClientPayments", fields: [clientId], references: [id])
+  tasker                User?         @relation("TaskerPayments", fields: [taskerId], references: [id])
+
+  @@map("payments")
+}
+
+model Review {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskId     String   @map("task_id") @db.Uuid
+  reviewerId String   @map("reviewer_id") @db.Uuid
+  revieweeId String   @map("reviewee_id") @db.Uuid
+
+  rating     Int      @db.Integer // 1-5
+  comment    String?
+
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  reviewer   User     @relation("ReviewsSent", fields: [reviewerId], references: [id])
+  reviewee   User     @relation("ReviewsReceived", fields: [revieweeId], references: [id])
+
+  @@unique([taskId, reviewerId])
+  @@map("reviews")
+}
+
+model Conversation {
+  id        String    @id @default(uuid()) @db.Uuid
+  taskId    String    @map("task_id") @db.Uuid
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  task      Task      @relation(fields: [taskId], references: [id])
+  messages  Message[]
+
+  @@map("conversations")
+}
+
+model Message {
+  id             String        @id @default(uuid()) @db.Uuid
+  conversationId String        @map("conversation_id") @db.Uuid
+  senderId       String        @map("sender_id") @db.Uuid
+
+  content        String
+  readAt         DateTime?     @map("read_at")
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User          @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
