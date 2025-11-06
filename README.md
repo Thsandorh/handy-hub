@@ -88,18 +88,43 @@ npm run dev
 
 ## 🎯 MVP Funkciók
 
-### ✅ Elkészült Funkciók
-- [ ] Kétoldalú regisztráció (Megbízó / Tasker)
-- [ ] Tasker profil ellenőrzés (ID feltöltés)
-- [ ] Feladat közzététele (kategória, leírás, fotó, helyszín, ár)
-- [ ] Térkép integráció (helyszín kiválasztás)
-- [ ] Tasker böngészés (nyitott feladatok környék alapján)
-- [ ] Ajánlattétel rendszer
-- [ ] Letéti fizetési rendszer (ESCROW)
-- [ ] SimplePay integráció
-- [ ] Beépített chat (Socket.io)
-- [ ] Kétoldalú értékelési rendszer
-- [ ] Admin dashboard (Tasker ellenőrzés)
+### ✅ Backend API (Teljes)
+- [x] **Authentication API** - JWT + bcrypt, login/register
+- [x] **User Management** - Client/Tasker/Admin roles
+- [x] **Tasks API** - CRUD, geolocation filtering, status management
+- [x] **Offers API** - Create, accept, reject offers
+- [x] **Payments API** - Escrow system (SimplePay ready)
+- [x] **Reviews API** - Two-way rating system
+- [x] **Messages API** - Real-time chat (Socket.io WebSocket)
+- [x] **Files API** - Upload handling (S3 ready)
+- [x] **Skills API** - Category management
+- [x] **Swagger Documentation** - Auto-generated API docs
+
+### ✅ Frontend UI (Core)
+- [x] **Landing Page** - Hero, categories, CTA sections
+- [x] **Authentication** - Login & Register pages (Client/Tasker)
+- [x] **Dashboard** - User-specific welcome screen
+- [x] **Task Browsing** - List and filter open tasks
+- [x] **Task Creation** - Form with validation
+- [x] **Responsive Design** - Mobile-friendly Tailwind CSS
+- [x] **UI Components** - shadcn/ui (Button, Card, Input, Label)
+
+### 🔄 Frontend UI (Backend Ready, UI Pending)
+- [ ] Task detail page with offer submission
+- [ ] Offer acceptance/rejection UI
+- [ ] Real-time chat interface
+- [ ] Review submission form
+- [ ] Tasker profile pages
+- [ ] File upload UI with previews
+- [ ] Map integration (Google Maps)
+- [ ] Admin dashboard (verification)
+
+### ⏳ Integrations (Not Yet Started)
+- [ ] SimplePay production credentials
+- [ ] AWS S3 file uploads
+- [ ] Email notifications (SendGrid/Mailgun)
+- [ ] Google Maps API integration
+- [ ] Push notifications
 
 ## 🛠️ Fejlesztői Parancsok
 
@@ -151,19 +176,35 @@ AWS_SECRET_ACCESS_KEY=your-secret
 
 ## 🧪 Tesztelés
 
+### Test Accounts (After Seeding)
+```
+Client:  client@mesterpont.hu  / password123
+Tasker1: tasker1@mesterpont.hu / password123
+Tasker2: tasker2@mesterpont.hu / password123
+Tasker3: tasker3@mesterpont.hu / password123
+Admin:   admin@mesterpont.hu   / password123
+```
+
+### Running Tests
 ```bash
-# Unit tests
+# Unit tests (coming soon)
 npm run test
 
-# E2E tests
+# E2E tests (coming soon)
 npm run test:e2e
+
+# Manual testing
+npm run dev
+# Then visit http://localhost:3000
 ```
 
 ## 📚 Dokumentáció
 
-- [API Documentation](./apps/api/README.md)
-- [Frontend Documentation](./apps/web/README.md)
-- [Database Schema](./packages/database/README.md)
+- **[Development Guide](./DEVELOPMENT.md)** - Setup, workflow, debugging
+- **[Deployment Guide](./DEPLOYMENT.md)** - Production deployment steps
+- **[Contributing Guide](./CONTRIBUTING.md)** - Code standards, PR process
+- **[API Documentation](http://localhost:4000/api/docs)** - Swagger UI (after `npm run dev`)
+- **[Database Schema](./packages/database/prisma/schema.prisma)** - Prisma schema
 
 ## 👥 Szerepkörök
 
@@ -192,7 +233,14 @@ npm run test:e2e
 
 ## 🚢 Deployment
 
-TODO: Deployment instructions
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for detailed production deployment instructions.
+
+**Quick start:**
+- Frontend: Deploy to Vercel
+- Backend: Deploy to Railway/Render
+- Database: Use Neon (serverless Postgres)
+- File Storage: AWS S3
+- Domain: Configure DNS for custom domain
 
 ## 📞 Támogatás
 
